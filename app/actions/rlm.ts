@@ -7,11 +7,14 @@ import { z } from "zod";
 const myModel = google("gemini-1.5-pro-latest");
 
 export async function processRLM(query: string, context: string) {
-  const { url } = await put("context.txt", context, {
+  // 1. Upload the context with a random suffix to avoid "already exists" errors
+  const { url } = await put("processed_context.txt", context, {
     access: "public",
+    addRandomSuffix: true, 
     token: process.env.BLOB_READ_WRITE_TOKEN,
   });
 
+  // 2. Execute the generative model
   const result = await generateText({
     model: myModel,
     system: `You are an RLM. Use 'subQuery' to fetch context chunks from ${url}.`,
@@ -19,7 +22,6 @@ export async function processRLM(query: string, context: string) {
     tools: {
       subQuery: tool({
         description: "Fetch a specific chunk of the context",
-        // FIX: Change 'parameters' to 'inputSchema'
         inputSchema: z.object({
           start: z.number().describe("The starting byte index"),
           end: z.number().describe("The ending byte index"),
@@ -28,6 +30,11 @@ export async function processRLM(query: string, context: string) {
           const response = await fetch(url, {
             headers: { Range: `bytes=${start}-${end}` },
           });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch range: ${response.statusText}`);
+          }
+          
           return response.text();
         },
       }),
