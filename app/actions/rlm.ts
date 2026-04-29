@@ -1,6 +1,6 @@
 "use server";
 import { put } from "@vercel/blob";
-import { generateText, tool } from "ai"; // 1. Import 'tool'
+import { generateText, tool } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
 
@@ -17,17 +17,22 @@ export async function processRLM(query: string, context: string) {
     system: `You are an RLM. Use 'subQuery' to fetch context chunks from ${url}.`,
     prompt: query,
     tools: {
-      // 2. Wrap your tool definition in the tool() function
       subQuery: tool({
         description: "Fetch a specific chunk of the context",
         parameters: z.object({ 
           start: z.number(), 
           end: z.number() 
         }),
-        execute: async ({ start, end }) => {
+        // Explicitly type the parameters here to satisfy the TS overload
+        execute: async ({ start, end }: { start: number; end: number }) => {
           const response = await fetch(url, { 
             headers: { Range: `bytes=${start}-${end}` } 
           });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch chunk: ${response.statusText}`);
+          }
+          
           return response.text();
         }
       })
