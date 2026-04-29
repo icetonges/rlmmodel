@@ -4,7 +4,7 @@ import { generateText, tool } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
 
-const myModel = google("gemini-1.5-pro-latest");
+const myModel = google("gemini-2.5-flash");
 
 export async function processRLM(query: string, context: string) {
   // 1. Upload the context with a random suffix to avoid "already exists" errors
